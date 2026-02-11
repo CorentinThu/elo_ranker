@@ -9,20 +9,32 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PlayerEntity = void 0;
+exports.MatchEntity = void 0;
 const typeorm_1 = require("typeorm");
-let PlayerEntity = class PlayerEntity {
+let MatchEntity = class MatchEntity {
 };
-exports.PlayerEntity = PlayerEntity;
+exports.MatchEntity = MatchEntity;
 __decorate([
-    (0, typeorm_1.PrimaryColumn)(),
-    __metadata("design:type", String)
-], PlayerEntity.prototype, "id", void 0);
-__decorate([
-    (0, typeorm_1.Column)('integer'),
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
-], PlayerEntity.prototype, "rank", void 0);
-exports.PlayerEntity = PlayerEntity = __decorate([
-    (0, typeorm_1.Entity)({ name: 'players' })
-], PlayerEntity);
-//# sourceMappingURL=player.entity.js.map
+], MatchEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], MatchEntity.prototype, "winner", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], MatchEntity.prototype, "loser", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], MatchEntity.prototype, "draw", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], MatchEntity.prototype, "createdAt", void 0);
+exports.MatchEntity = MatchEntity = __decorate([
+    (0, typeorm_1.Entity)({ name: 'matches' })
+], MatchEntity);
+//# sourceMappingURL=match.entity.js.map

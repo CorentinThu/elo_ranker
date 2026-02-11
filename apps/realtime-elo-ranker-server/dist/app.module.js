@@ -12,12 +12,23 @@ const players_module_1 = require("./players/players.module");
 const ranking_module_1 = require("./ranking/ranking.module");
 const health_controller_1 = require("./health.controller");
 const ranking_cache_module_1 = require("./ranking/ranking-cache.module");
+const typeorm_1 = require("@nestjs/typeorm");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [ranking_cache_module_1.RankingCacheModule, players_module_1.PlayersModule, ranking_module_1.RankingModule],
+        imports: [
+            typeorm_1.TypeOrmModule.forRoot({
+                type: 'sqlite',
+                database: 'data/elo.sqlite',
+                autoLoadEntities: true,
+                synchronize: true,
+            }),
+            ranking_cache_module_1.RankingCacheModule,
+            players_module_1.PlayersModule,
+            ranking_module_1.RankingModule,
+        ],
         controllers: [health_controller_1.HealthController],
     })
 ], AppModule);

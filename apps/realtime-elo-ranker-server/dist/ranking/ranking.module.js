@@ -13,12 +13,14 @@ const match_controller_1 = require("./match.controller");
 const ranking_service_1 = require("./ranking.service");
 const players_module_1 = require("../players/players.module");
 const ranking_cache_module_1 = require("./ranking-cache.module");
+const typeorm_1 = require("@nestjs/typeorm");
+const match_entity_1 = require("./entities/match.entity");
 let RankingModule = class RankingModule {
 };
 exports.RankingModule = RankingModule;
 exports.RankingModule = RankingModule = __decorate([
     (0, common_1.Module)({
-        imports: [players_module_1.PlayersModule, ranking_cache_module_1.RankingCacheModule],
+        imports: [players_module_1.PlayersModule, ranking_cache_module_1.RankingCacheModule, typeorm_1.TypeOrmModule.forFeature([match_entity_1.MatchEntity])],
         controllers: [ranking_controller_1.RankingController, match_controller_1.MatchController],
         providers: [ranking_service_1.RankingService],
     })

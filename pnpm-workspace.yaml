@@ -38,3 +38,4 @@ catalog:
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - sharp
+  - sqlite3
