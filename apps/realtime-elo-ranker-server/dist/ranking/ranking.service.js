@@ -21,11 +21,14 @@ const players_service_1 = require("../players/players.service");
 const ranking_cache_service_1 = require("./ranking-cache.service");
 const match_entity_1 = require("./entities/match.entity");
 const elo_service_1 = require("./elo.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
+const ranking_update_event_1 = require("./events/ranking-update.event");
 let RankingService = class RankingService {
-    constructor(playersService, rankingCache, eloService, matchRepo) {
+    constructor(playersService, rankingCache, eloService, eventEmitter, matchRepo) {
         this.playersService = playersService;
         this.rankingCache = rankingCache;
         this.eloService = eloService;
+        this.eventEmitter = eventEmitter;
         this.matchRepo = matchRepo;
     }
     async getRanking() {
@@ -76,13 +79,27 @@ let RankingService = class RankingService {
             loser: loser.id,
             draw: dto.draw,
         }));
+        this.eventEmitter.emit('ranking.updated', new ranking_update_event_1.RankingUpdateEvent(winnerUpdated));
+        this.eventEmitter.emit('ranking.updated', new ranking_update_event_1.RankingUpdateEvent(loserUpdated));
         return {
             winner: winnerUpdated,
             loser: loserUpdated,
         };
     }
     streamRankingEvents() {
-        return (0, rxjs_1.interval)(5000).pipe((0, rxjs_1.mergeMap)((tick) => (0, rxjs_1.from)(this.getRanking()).pipe((0, rxjs_1.map)((ranking) => {
+        const liveUpdates$ = new rxjs_1.Observable((subscriber) => {
+            const listener = (event) => {
+                subscriber.next({
+                    data: {
+                        type: 'RankingUpdate',
+                        player: { id: event.player.id, rank: event.player.rank },
+                    },
+                });
+            };
+            this.eventEmitter.on('ranking.updated', listener);
+            return () => this.eventEmitter.off('ranking.updated', listener);
+        });
+        const heartbeat$ = (0, rxjs_1.interval)(5000).pipe((0, rxjs_1.mergeMap)((tick) => (0, rxjs_1.from)(this.getRanking()).pipe((0, rxjs_1.map)((ranking) => {
             const player = ranking[tick % ranking.length];
             return {
                 data: {
@@ -98,15 +115,17 @@ let RankingService = class RankingService {
             }
             throw err;
         }))));
+        return (0, rxjs_1.merge)(liveUpdates$, heartbeat$);
     }
 };
 exports.RankingService = RankingService;
 exports.RankingService = RankingService = __decorate([
     (0, common_1.Injectable)(),
-    __param(3, (0, typeorm_1.InjectRepository)(match_entity_1.MatchEntity)),
+    __param(4, (0, typeorm_1.InjectRepository)(match_entity_1.MatchEntity)),
     __metadata("design:paramtypes", [players_service_1.PlayersService,
         ranking_cache_service_1.RankingCacheService,
         elo_service_1.EloService,
+        event_emitter_1.EventEmitter2,
         typeorm_2.Repository])
 ], RankingService);
 //# sourceMappingURL=ranking.service.js.map

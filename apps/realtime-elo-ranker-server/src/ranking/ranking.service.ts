@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { catchError, from, interval, map, mergeMap, Observable, of } from 'rxjs';
+import { catchError, from, interval, map, merge, mergeMap, Observable, of } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PlayersService } from '../players/players.service';
 import { PublishMatchDto } from './dto/publish-match.dto';
@@ -15,6 +15,8 @@ import { MatchResult } from './models/match-result';
 import { RankingCacheService } from './ranking-cache.service';
 import { MatchEntity } from './entities/match.entity';
 import { EloService } from './elo.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { RankingUpdateEvent } from './events/ranking-update.event';
 
 @Injectable()
 export class RankingService {
@@ -22,6 +24,7 @@ export class RankingService {
     private readonly playersService: PlayersService,
     private readonly rankingCache: RankingCacheService,
     private readonly eloService: EloService,
+    private readonly eventEmitter: EventEmitter2,
     @InjectRepository(MatchEntity)
     private readonly matchRepo: Repository<MatchEntity>,
   ) {}
@@ -87,6 +90,15 @@ export class RankingService {
       }),
     );
 
+    this.eventEmitter.emit(
+      'ranking.updated',
+      new RankingUpdateEvent(winnerUpdated),
+    );
+    this.eventEmitter.emit(
+      'ranking.updated',
+      new RankingUpdateEvent(loserUpdated),
+    );
+
     return {
       winner: winnerUpdated,
       loser: loserUpdated,
@@ -94,7 +106,20 @@ export class RankingService {
   }
 
   streamRankingEvents(): Observable<MessageEvent> {
-    return interval(5000).pipe(
+    const liveUpdates$ = new Observable<MessageEvent>((subscriber) => {
+      const listener = (event: RankingUpdateEvent) => {
+        subscriber.next({
+          data: {
+            type: 'RankingUpdate',
+            player: { id: event.player.id, rank: event.player.rank },
+          },
+        });
+      };
+      this.eventEmitter.on('ranking.updated', listener);
+      return () => this.eventEmitter.off('ranking.updated', listener);
+    });
+
+    const heartbeat$ = interval(5000).pipe(
       mergeMap((tick) =>
         from(this.getRanking()).pipe(
           map((ranking) => {
@@ -117,5 +142,6 @@ export class RankingService {
         ),
       ),
     );
+    return merge(liveUpdates$, heartbeat$);
   }
 }

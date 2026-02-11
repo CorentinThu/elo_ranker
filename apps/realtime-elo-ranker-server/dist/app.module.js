@@ -13,12 +13,14 @@ const ranking_module_1 = require("./ranking/ranking.module");
 const health_controller_1 = require("./health.controller");
 const ranking_cache_module_1 = require("./ranking/ranking-cache.module");
 const typeorm_1 = require("@nestjs/typeorm");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            event_emitter_1.EventEmitterModule.forRoot(),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'sqlite',
                 database: 'data/elo.sqlite',
