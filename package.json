@@ -14,7 +14,8 @@
     "apps:server:start": "pnpm run --filter ./apps/realtime-elo-ranker-server start",
     "libs:ui:build": "pnpm run --filter ./libs/ui build",
     "libs:ui:test": "pnpm run --filter ./libs/ui test",
-    "docs:swagger:start": "pnpm run --filter ./docs/swagger start"
+    "docs:swagger:start": "pnpm run --filter ./docs/swagger start",
+    "ci": "pnpm run apps:server:test"
   },
   "devDependencies": {
     "generate-react-cli": "catalog:",
