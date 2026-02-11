@@ -3,6 +3,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
   MessageEvent,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { catchError, from, interval, map, mergeMap, Observable, of } from 'rxjs';
@@ -13,12 +14,14 @@ import { Player } from '../players/player.entity';
 import { MatchResult } from './models/match-result';
 import { RankingCacheService } from './ranking-cache.service';
 import { MatchEntity } from './entities/match.entity';
+import { EloService } from './elo.service';
 
 @Injectable()
 export class RankingService {
   constructor(
     private readonly playersService: PlayersService,
     private readonly rankingCache: RankingCacheService,
+    private readonly eloService: EloService,
     @InjectRepository(MatchEntity)
     private readonly matchRepo: Repository<MatchEntity>,
   ) {}
@@ -44,6 +47,13 @@ export class RankingService {
   }
 
   async processMatch(dto: PublishMatchDto): Promise<MatchResult> {
+    if (dto.winner === dto.loser) {
+      throw new BadRequestException({
+        code: 400,
+        message: 'Winner and loser must be different players',
+      });
+    }
+
     const winner = await this.playersService.findById(dto.winner);
     const loser = await this.playersService.findById(dto.loser);
 
@@ -54,24 +64,18 @@ export class RankingService {
       });
     }
 
-    if (dto.draw) {
-      await this.playersService.upsert(winner);
-      await this.playersService.upsert(loser);
-      await this.matchRepo.save(
-        this.matchRepo.create({
-          winner: winner.id,
-          loser: loser.id,
-          draw: dto.draw,
-        }),
-      );
-      return { winner, loser };
-    }
+    const scoreA = dto.draw ? 0.5 : 1;
+    const scoreB = dto.draw ? 0.5 : 0;
 
-    const winnerNewRank = winner.rank + 10;
-    const loserNewRank = Math.max(loser.rank - 10, 0);
+    const { nextRatingA, nextRatingB } = this.eloService.compute({
+      ratingA: winner.rank,
+      ratingB: loser.rank,
+      scoreA,
+      scoreB,
+    });
 
-    const winnerUpdated: Player = { ...winner, rank: winnerNewRank };
-    const loserUpdated: Player = { ...loser, rank: loserNewRank };
+    const winnerUpdated: Player = { ...winner, rank: nextRatingA };
+    const loserUpdated: Player = { ...loser, rank: nextRatingB };
 
     await this.playersService.upsert(winnerUpdated);
     await this.playersService.upsert(loserUpdated);
