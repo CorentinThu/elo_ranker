@@ -9,6 +9,7 @@
     "apps:client:dev": "pnpm run --filter ./apps/realtime-elo-ranker-client dev",
     "apps:api-mock:start": "pnpm run --filter ./apps/realtime-elo-ranker-api-mock start",
     "apps:server:dev": "pnpm run --filter ./apps/realtime-elo-ranker-server start:dev",
+    "apps:server:test": "pnpm run --filter ./apps/realtime-elo-ranker-server test",
     "apps:server:build": "pnpm run --filter ./apps/realtime-elo-ranker-server build",
     "apps:server:start": "pnpm run --filter ./apps/realtime-elo-ranker-server start",
     "libs:ui:build": "pnpm run --filter ./libs/ui build",
