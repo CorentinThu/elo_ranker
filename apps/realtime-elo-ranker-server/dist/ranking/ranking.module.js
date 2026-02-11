@@ -15,6 +15,7 @@ const players_module_1 = require("../players/players.module");
 const ranking_cache_module_1 = require("./ranking-cache.module");
 const typeorm_1 = require("@nestjs/typeorm");
 const match_entity_1 = require("./entities/match.entity");
+const elo_service_1 = require("./elo.service");
 let RankingModule = class RankingModule {
 };
 exports.RankingModule = RankingModule;
@@ -22,7 +23,7 @@ exports.RankingModule = RankingModule = __decorate([
     (0, common_1.Module)({
         imports: [players_module_1.PlayersModule, ranking_cache_module_1.RankingCacheModule, typeorm_1.TypeOrmModule.forFeature([match_entity_1.MatchEntity])],
         controllers: [ranking_controller_1.RankingController, match_controller_1.MatchController],
-        providers: [ranking_service_1.RankingService],
+        providers: [ranking_service_1.RankingService, elo_service_1.EloService],
     })
 ], RankingModule);
 //# sourceMappingURL=ranking.module.js.map

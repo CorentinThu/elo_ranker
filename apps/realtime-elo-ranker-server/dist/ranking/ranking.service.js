@@ -20,10 +20,12 @@ const typeorm_2 = require("typeorm");
 const players_service_1 = require("../players/players.service");
 const ranking_cache_service_1 = require("./ranking-cache.service");
 const match_entity_1 = require("./entities/match.entity");
+const elo_service_1 = require("./elo.service");
 let RankingService = class RankingService {
-    constructor(playersService, rankingCache, matchRepo) {
+    constructor(playersService, rankingCache, eloService, matchRepo) {
         this.playersService = playersService;
         this.rankingCache = rankingCache;
+        this.eloService = eloService;
         this.matchRepo = matchRepo;
     }
     async getRanking() {
@@ -43,6 +45,12 @@ let RankingService = class RankingService {
         return ranking;
     }
     async processMatch(dto) {
+        if (dto.winner === dto.loser) {
+            throw new common_1.BadRequestException({
+                code: 400,
+                message: 'Winner and loser must be different players',
+            });
+        }
         const winner = await this.playersService.findById(dto.winner);
         const loser = await this.playersService.findById(dto.loser);
         if (!winner || !loser) {
@@ -51,20 +59,16 @@ let RankingService = class RankingService {
                 message: 'One or both players do not exist',
             });
         }
-        if (dto.draw) {
-            await this.playersService.upsert(winner);
-            await this.playersService.upsert(loser);
-            await this.matchRepo.save(this.matchRepo.create({
-                winner: winner.id,
-                loser: loser.id,
-                draw: dto.draw,
-            }));
-            return { winner, loser };
-        }
-        const winnerNewRank = winner.rank + 10;
-        const loserNewRank = Math.max(loser.rank - 10, 0);
-        const winnerUpdated = Object.assign(Object.assign({}, winner), { rank: winnerNewRank });
-        const loserUpdated = Object.assign(Object.assign({}, loser), { rank: loserNewRank });
+        const scoreA = dto.draw ? 0.5 : 1;
+        const scoreB = dto.draw ? 0.5 : 0;
+        const { nextRatingA, nextRatingB } = this.eloService.compute({
+            ratingA: winner.rank,
+            ratingB: loser.rank,
+            scoreA,
+            scoreB,
+        });
+        const winnerUpdated = Object.assign(Object.assign({}, winner), { rank: nextRatingA });
+        const loserUpdated = Object.assign(Object.assign({}, loser), { rank: nextRatingB });
         await this.playersService.upsert(winnerUpdated);
         await this.playersService.upsert(loserUpdated);
         await this.matchRepo.save(this.matchRepo.create({
@@ -99,9 +103,10 @@ let RankingService = class RankingService {
 exports.RankingService = RankingService;
 exports.RankingService = RankingService = __decorate([
     (0, common_1.Injectable)(),
-    __param(2, (0, typeorm_1.InjectRepository)(match_entity_1.MatchEntity)),
+    __param(3, (0, typeorm_1.InjectRepository)(match_entity_1.MatchEntity)),
     __metadata("design:paramtypes", [players_service_1.PlayersService,
         ranking_cache_service_1.RankingCacheService,
+        elo_service_1.EloService,
         typeorm_2.Repository])
 ], RankingService);
 //# sourceMappingURL=ranking.service.js.map

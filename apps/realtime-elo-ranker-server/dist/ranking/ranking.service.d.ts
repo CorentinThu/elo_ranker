@@ -7,11 +7,13 @@ import { Player } from '../players/player.entity';
 import { MatchResult } from './models/match-result';
 import { RankingCacheService } from './ranking-cache.service';
 import { MatchEntity } from './entities/match.entity';
+import { EloService } from './elo.service';
 export declare class RankingService {
     private readonly playersService;
     private readonly rankingCache;
+    private readonly eloService;
     private readonly matchRepo;
-    constructor(playersService: PlayersService, rankingCache: RankingCacheService, matchRepo: Repository<MatchEntity>);
+    constructor(playersService: PlayersService, rankingCache: RankingCacheService, eloService: EloService, matchRepo: Repository<MatchEntity>);
     getRanking(): Promise<Player[]>;
     processMatch(dto: PublishMatchDto): Promise<MatchResult>;
     streamRankingEvents(): Observable<MessageEvent>;
