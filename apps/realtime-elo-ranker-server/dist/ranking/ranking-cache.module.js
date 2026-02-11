@@ -6,19 +6,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AppModule = void 0;
+exports.RankingCacheModule = void 0;
 const common_1 = require("@nestjs/common");
-const players_module_1 = require("./players/players.module");
-const ranking_module_1 = require("./ranking/ranking.module");
-const health_controller_1 = require("./health.controller");
-const ranking_cache_module_1 = require("./ranking/ranking-cache.module");
-let AppModule = class AppModule {
+const ranking_cache_service_1 = require("./ranking-cache.service");
+let RankingCacheModule = class RankingCacheModule {
 };
-exports.AppModule = AppModule;
-exports.AppModule = AppModule = __decorate([
+exports.RankingCacheModule = RankingCacheModule;
+exports.RankingCacheModule = RankingCacheModule = __decorate([
     (0, common_1.Module)({
-        imports: [ranking_cache_module_1.RankingCacheModule, players_module_1.PlayersModule, ranking_module_1.RankingModule],
-        controllers: [health_controller_1.HealthController],
+        providers: [ranking_cache_service_1.RankingCacheService],
+        exports: [ranking_cache_service_1.RankingCacheService],
     })
-], AppModule);
-//# sourceMappingURL=app.module.js.map
+], RankingCacheModule);
+//# sourceMappingURL=ranking-cache.module.js.map

@@ -9,15 +9,26 @@ import { PlayersService } from '../players/players.service';
 import { PublishMatchDto } from './dto/publish-match.dto';
 import { Player } from '../players/player.entity';
 import { MatchResult } from './models/match-result';
+import { RankingCacheService } from './ranking-cache.service';
 
 @Injectable()
 export class RankingService {
-  constructor(private readonly playersService: PlayersService) {}
+  constructor(
+    private readonly playersService: PlayersService,
+    private readonly rankingCache: RankingCacheService,
+  ) {}
 
   getRanking(): Player[] {
-    const ranking = this.playersService
-      .findAll()
-      .sort((a, b) => b.rank - a.rank);
+    let ranking = this.rankingCache.getAll();
+
+    if (ranking.length === 0) {
+      const players = this.playersService.findAll();
+      this.rankingCache.bulkSet(players);
+      ranking = players;
+    }
+
+    ranking = ranking.sort((a, b) => b.rank - a.rank);
+
     if (ranking.length === 0) {
       throw new NotFoundException({
         code: 404,
@@ -39,6 +50,8 @@ export class RankingService {
     }
 
     if (dto.draw) {
+      this.rankingCache.upsert(winner);
+      this.rankingCache.upsert(loser);
       return { winner, loser };
     }
 
@@ -50,6 +63,8 @@ export class RankingService {
 
     this.playersService.upsert(winnerUpdated);
     this.playersService.upsert(loserUpdated);
+    this.rankingCache.upsert(winnerUpdated);
+    this.rankingCache.upsert(loserUpdated);
 
     return {
       winner: winnerUpdated,
@@ -60,21 +75,27 @@ export class RankingService {
   streamRankingEvents(): Observable<MessageEvent> {
     return interval(5000).pipe(
       map((tick) => {
-        const ranking = this.playersService
-          .findAll()
-          .sort((a, b) => b.rank - a.rank);
-        if (ranking.length === 0) {
+        try {
+          const ranking = this.getRanking();
+          const player = ranking[tick % ranking.length];
           return {
-            data: { type: 'Error', code: 404, message: 'No ranking available' },
+            data: {
+              type: 'RankingUpdate',
+              player: { id: player.id, rank: player.rank },
+            },
           };
+        } catch (err) {
+          if (err instanceof NotFoundException) {
+            return {
+              data: {
+                type: 'Error',
+                code: 404,
+                message: 'No ranking available',
+              },
+            };
+          }
+          throw err;
         }
-        const player = ranking[tick % ranking.length];
-        return {
-          data: {
-            type: 'RankingUpdate',
-            player: { id: player.id, rank: player.rank },
-          },
-        };
       }),
     );
   }
