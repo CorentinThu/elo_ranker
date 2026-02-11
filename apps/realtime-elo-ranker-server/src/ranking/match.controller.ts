@@ -8,7 +8,7 @@ export class MatchController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  publishMatch(@Body() dto: PublishMatchDto) {
+  async publishMatch(@Body() dto: PublishMatchDto) {
     return this.rankingService.processMatch(dto);
   }
 }

@@ -3,5 +3,5 @@ import { RankingService } from './ranking.service';
 export declare class MatchController {
     private readonly rankingService;
     constructor(rankingService: RankingService);
-    publishMatch(dto: PublishMatchDto): import("./models/match-result").MatchResult;
+    publishMatch(dto: PublishMatchDto): Promise<import("./models/match-result").MatchResult>;
 }

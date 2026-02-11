@@ -8,7 +8,7 @@ export class PlayersController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  createPlayer(@Body() dto: CreatePlayerDto) {
+  async createPlayer(@Body() dto: CreatePlayerDto) {
     return this.playersService.create(dto);
   }
 }

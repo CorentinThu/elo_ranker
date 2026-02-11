@@ -4,6 +4,6 @@ import { RankingService } from './ranking.service';
 export declare class RankingController {
     private readonly rankingService;
     constructor(rankingService: RankingService);
-    getRanking(): import("../players/player.entity").Player[];
+    getRanking(): Promise<import("../players/player.entity").PlayerEntity[]>;
     streamRankingUpdates(): Observable<MessageEvent>;
 }

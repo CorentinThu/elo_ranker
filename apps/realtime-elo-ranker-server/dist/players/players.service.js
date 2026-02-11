@@ -8,16 +8,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlayersService = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const player_entity_1 = require("./player.entity");
 const ranking_cache_service_1 = require("../ranking/ranking-cache.service");
 let PlayersService = class PlayersService {
-    constructor(rankingCache) {
+    constructor(rankingCache, playersRepo) {
         this.rankingCache = rankingCache;
+        this.playersRepo = playersRepo;
         this.players = new Map();
     }
-    create(dto) {
+    async create(dto) {
         const id = dto.id.trim();
         if (!id) {
             throw new common_1.BadRequestException({
@@ -25,40 +32,65 @@ let PlayersService = class PlayersService {
                 message: 'Player id must be a non-empty string',
             });
         }
-        if (this.players.has(id)) {
+        if (this.players.has(id) || (await this.playersRepo.findOne({ where: { id } }))) {
             throw new common_1.ConflictException({
                 code: 409,
                 message: `Player '${id}' already exists`,
             });
         }
-        const player = {
+        const player = this.playersRepo.create({
             id,
-            rank: this.computeInitialRank(),
-        };
+            rank: await this.computeInitialRank(),
+        });
+        await this.playersRepo.save(player);
         this.players.set(id, player);
         this.rankingCache.upsert(player);
         return player;
     }
-    findAll() {
+    async findAll() {
+        if (this.players.size === 0) {
+            const dbPlayers = await this.playersRepo.find();
+            dbPlayers.forEach((p) => this.players.set(p.id, p));
+            this.rankingCache.bulkSet(dbPlayers);
+        }
         return Array.from(this.players.values());
     }
-    findById(id) {
-        return this.players.get(id);
+    async findById(id) {
+        var _a;
+        const cached = (_a = this.players.get(id)) !== null && _a !== void 0 ? _a : this.rankingCache.getById(id);
+        if (cached) {
+            return cached;
+        }
+        const found = await this.playersRepo.findOne({ where: { id } });
+        if (found) {
+            this.players.set(id, found);
+            this.rankingCache.upsert(found);
+        }
+        return found !== null && found !== void 0 ? found : undefined;
     }
-    upsert(player) {
+    async upsert(player) {
+        await this.playersRepo.save(player);
         this.players.set(player.id, player);
+        this.rankingCache.upsert(player);
     }
-    computeInitialRank() {
-        if (this.players.size === 0) {
+    async computeInitialRank() {
+        const count = await this.playersRepo.count();
+        if (count === 0) {
             return 1000;
         }
-        const sum = Array.from(this.players.values()).reduce((acc, p) => acc + p.rank, 0);
-        return Math.round(sum / this.players.size);
+        const raw = await this.playersRepo
+            .createQueryBuilder('p')
+            .select('AVG(p.rank)', 'avg')
+            .getRawOne();
+        const parsedAvg = (raw === null || raw === void 0 ? void 0 : raw.avg) ? parseFloat(raw.avg) : 1000;
+        return Math.round(parsedAvg);
     }
 };
 exports.PlayersService = PlayersService;
 exports.PlayersService = PlayersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [ranking_cache_service_1.RankingCacheService])
+    __param(1, (0, typeorm_1.InjectRepository)(player_entity_1.PlayerEntity)),
+    __metadata("design:paramtypes", [ranking_cache_service_1.RankingCacheService,
+        typeorm_2.Repository])
 ], PlayersService);
 //# sourceMappingURL=players.service.js.map

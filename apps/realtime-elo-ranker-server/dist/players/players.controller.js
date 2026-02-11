@@ -20,7 +20,7 @@ let PlayersController = class PlayersController {
     constructor(playersService) {
         this.playersService = playersService;
     }
-    createPlayer(dto) {
+    async createPlayer(dto) {
         return this.playersService.create(dto);
     }
 };
@@ -31,7 +31,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_player_dto_1.CreatePlayerDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PlayersController.prototype, "createPlayer", null);
 exports.PlayersController = PlayersController = __decorate([
     (0, common_1.Controller)('player'),

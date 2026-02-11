@@ -3,5 +3,5 @@ import { PlayersService } from './players.service';
 export declare class PlayersController {
     private readonly playersService;
     constructor(playersService: PlayersService);
-    createPlayer(dto: CreatePlayerDto): import("./player.entity").Player;
+    createPlayer(dto: CreatePlayerDto): Promise<import("./player.entity").PlayerEntity>;
 }

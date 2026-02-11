@@ -20,7 +20,7 @@ let MatchController = class MatchController {
     constructor(rankingService) {
         this.rankingService = rankingService;
     }
-    publishMatch(dto) {
+    async publishMatch(dto) {
         return this.rankingService.processMatch(dto);
     }
 };
@@ -31,7 +31,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [publish_match_dto_1.PublishMatchDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], MatchController.prototype, "publishMatch", null);
 exports.MatchController = MatchController = __decorate([
     (0, common_1.Controller)('match'),

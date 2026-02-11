@@ -3,7 +3,9 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
-import { Player } from './player.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Player, PlayerEntity } from './player.entity';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { RankingCacheService } from '../ranking/ranking-cache.service';
 
@@ -11,9 +13,13 @@ import { RankingCacheService } from '../ranking/ranking-cache.service';
 export class PlayersService {
   private players: Map<string, Player> = new Map();
 
-  constructor(private readonly rankingCache: RankingCacheService) {}
+  constructor(
+    private readonly rankingCache: RankingCacheService,
+    @InjectRepository(PlayerEntity)
+    private readonly playersRepo: Repository<PlayerEntity>,
+  ) {}
 
-  create(dto: CreatePlayerDto): Player {
+  async create(dto: CreatePlayerDto): Promise<Player> {
     const id = dto.id.trim();
     if (!id) {
       throw new BadRequestException({
@@ -21,41 +27,60 @@ export class PlayersService {
         message: 'Player id must be a non-empty string',
       });
     }
-    if (this.players.has(id)) {
+    if (this.players.has(id) || (await this.playersRepo.findOne({ where: { id } }))) {
       throw new ConflictException({
         code: 409,
         message: `Player '${id}' already exists`,
       });
     }
-    const player: Player = {
+    const player: PlayerEntity = this.playersRepo.create({
       id,
-      rank: this.computeInitialRank(),
-    };
+      rank: await this.computeInitialRank(),
+    });
+    await this.playersRepo.save(player);
     this.players.set(id, player);
     this.rankingCache.upsert(player);
     return player;
   }
 
-  findAll(): Player[] {
+  async findAll(): Promise<Player[]> {
+    if (this.players.size === 0) {
+      const dbPlayers = await this.playersRepo.find();
+      dbPlayers.forEach((p) => this.players.set(p.id, p));
+      this.rankingCache.bulkSet(dbPlayers);
+    }
     return Array.from(this.players.values());
   }
 
-  findById(id: string): Player | undefined {
-    return this.players.get(id);
+  async findById(id: string): Promise<Player | undefined> {
+    const cached = this.players.get(id) ?? this.rankingCache.getById(id);
+    if (cached) {
+      return cached;
+    }
+    const found = await this.playersRepo.findOne({ where: { id } });
+    if (found) {
+      this.players.set(id, found);
+      this.rankingCache.upsert(found);
+    }
+    return found ?? undefined;
   }
 
-  upsert(player: Player): void {
+  async upsert(player: Player): Promise<void> {
+    await this.playersRepo.save(player);
     this.players.set(player.id, player);
+    this.rankingCache.upsert(player);
   }
 
-  private computeInitialRank(): number {
-    if (this.players.size === 0) {
+  private async computeInitialRank(): Promise<number> {
+    const count = await this.playersRepo.count();
+    if (count === 0) {
       return 1000;
     }
-    const sum = Array.from(this.players.values()).reduce(
-      (acc, p) => acc + p.rank,
-      0,
-    );
-    return Math.round(sum / this.players.size);
+    const raw = await this.playersRepo
+      .createQueryBuilder('p')
+      .select('AVG(p.rank)', 'avg')
+      .getRawOne<{ avg: string } | undefined>();
+    const parsedAvg = raw?.avg ? parseFloat(raw.avg) : 1000;
+    return Math.round(parsedAvg);
   }
 }
