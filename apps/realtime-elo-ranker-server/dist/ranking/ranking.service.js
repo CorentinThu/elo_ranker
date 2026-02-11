@@ -13,14 +13,20 @@ exports.RankingService = void 0;
 const common_1 = require("@nestjs/common");
 const rxjs_1 = require("rxjs");
 const players_service_1 = require("../players/players.service");
+const ranking_cache_service_1 = require("./ranking-cache.service");
 let RankingService = class RankingService {
-    constructor(playersService) {
+    constructor(playersService, rankingCache) {
         this.playersService = playersService;
+        this.rankingCache = rankingCache;
     }
     getRanking() {
-        const ranking = this.playersService
-            .findAll()
-            .sort((a, b) => b.rank - a.rank);
+        let ranking = this.rankingCache.getAll();
+        if (ranking.length === 0) {
+            const players = this.playersService.findAll();
+            this.rankingCache.bulkSet(players);
+            ranking = players;
+        }
+        ranking = ranking.sort((a, b) => b.rank - a.rank);
         if (ranking.length === 0) {
             throw new common_1.NotFoundException({
                 code: 404,
@@ -39,6 +45,8 @@ let RankingService = class RankingService {
             });
         }
         if (dto.draw) {
+            this.rankingCache.upsert(winner);
+            this.rankingCache.upsert(loser);
             return { winner, loser };
         }
         const winnerNewRank = winner.rank + 10;
@@ -47,6 +55,8 @@ let RankingService = class RankingService {
         const loserUpdated = Object.assign(Object.assign({}, loser), { rank: loserNewRank });
         this.playersService.upsert(winnerUpdated);
         this.playersService.upsert(loserUpdated);
+        this.rankingCache.upsert(winnerUpdated);
+        this.rankingCache.upsert(loserUpdated);
         return {
             winner: winnerUpdated,
             loser: loserUpdated,
@@ -54,27 +64,35 @@ let RankingService = class RankingService {
     }
     streamRankingEvents() {
         return (0, rxjs_1.interval)(5000).pipe((0, rxjs_1.map)((tick) => {
-            const ranking = this.playersService
-                .findAll()
-                .sort((a, b) => b.rank - a.rank);
-            if (ranking.length === 0) {
+            try {
+                const ranking = this.getRanking();
+                const player = ranking[tick % ranking.length];
                 return {
-                    data: { type: 'Error', code: 404, message: 'No ranking available' },
+                    data: {
+                        type: 'RankingUpdate',
+                        player: { id: player.id, rank: player.rank },
+                    },
                 };
             }
-            const player = ranking[tick % ranking.length];
-            return {
-                data: {
-                    type: 'RankingUpdate',
-                    player: { id: player.id, rank: player.rank },
-                },
-            };
+            catch (err) {
+                if (err instanceof common_1.NotFoundException) {
+                    return {
+                        data: {
+                            type: 'Error',
+                            code: 404,
+                            message: 'No ranking available',
+                        },
+                    };
+                }
+                throw err;
+            }
         }));
     }
 };
 exports.RankingService = RankingService;
 exports.RankingService = RankingService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [players_service_1.PlayersService])
+    __metadata("design:paramtypes", [players_service_1.PlayersService,
+        ranking_cache_service_1.RankingCacheService])
 ], RankingService);
 //# sourceMappingURL=ranking.service.js.map

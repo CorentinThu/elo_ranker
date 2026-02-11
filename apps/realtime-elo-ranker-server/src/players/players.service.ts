@@ -5,10 +5,13 @@ import {
 } from '@nestjs/common';
 import { Player } from './player.entity';
 import { CreatePlayerDto } from './dto/create-player.dto';
+import { RankingCacheService } from '../ranking/ranking-cache.service';
 
 @Injectable()
 export class PlayersService {
   private players: Map<string, Player> = new Map();
+
+  constructor(private readonly rankingCache: RankingCacheService) {}
 
   create(dto: CreatePlayerDto): Player {
     const id = dto.id.trim();
@@ -29,6 +32,7 @@ export class PlayersService {
       rank: this.computeInitialRank(),
     };
     this.players.set(id, player);
+    this.rankingCache.upsert(player);
     return player;
   }
 
