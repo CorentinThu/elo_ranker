@@ -1,6 +1,5 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+/** @type {import('jest').Config} */
+module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   rootDir: '.',
@@ -8,9 +7,8 @@ const config: Config = {
   testMatch: ['**/*.spec.ts', '**/*.test.ts', '**/*.e2e-spec.ts'],
   collectCoverageFrom: ['src/**/*.(t|j)s'],
   coverageDirectory: 'coverage',
+  coveragePathIgnorePatterns: ['<rootDir>/src/main.ts'],
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/src/$1',
   },
 };
-
-export default config;
